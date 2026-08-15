@@ -1,0 +1,70 @@
+html, body { margin: 0; padding: 0; }
+body {
+  background: #EFEDF7;
+  font-family: 'Noto Sans KR', 'Pretendard Variable', Pretendard, system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  min-height: 100vh;
+}
+* { box-sizing: border-box; }
+a { color: #5B4BF7; text-decoration: none; }
+a:hover { color: #4436C9; }
+button {
+  font-family: inherit;
+  cursor: pointer;
+  border: 0;
+  background: none;
+  -webkit-tap-highlight-color: transparent;
+  color: inherit;
+}
+input { font-family: inherit; }
+img, svg { max-width: 100%; }
+
+@keyframes rise { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+@keyframes pop { 0% { transform: scale(.86); opacity: 0; } 60% { transform: scale(1.04); } 100% { transform: scale(1); opacity: 1; } }
+@keyframes bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-7px); } }
+@keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-6px); } 75% { transform: translateX(6px); } }
+
+.app-shell {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px 0;
+}
+.app-frame {
+  position: relative;
+  width: 100%;
+  max-width: 440px;
+  min-height: 780px;
+  background: #fff;
+  color: #2B2545;
+  overflow: hidden;
+  border-radius: 28px;
+  box-shadow: 0 30px 70px rgba(43, 37, 69, .18), 0 0 0 1px rgba(43, 37, 69, .06);
+}
+@media (min-width: 460px) {
+  .app-frame { height: 860px; min-height: 0; }
+}
+@media (max-width: 459px) {
+  .app-shell { padding: 0; }
+  .app-frame { border-radius: 0; box-shadow: none; max-width: 100%; min-height: 100vh; }
+}
+
+.brand-logo { font-family: 'Nunito', sans-serif; font-weight: 900; letter-spacing: -.02em; }
+.stat-num { font-family: 'Nunito', sans-serif; font-weight: 900; }
+
+.btn-primary {
+  width: 100%; background: #5B4BF7; color: #fff; border-radius: 16px; padding: 17px;
+  font-size: 16px; font-weight: 800; letter-spacing: -.01em; box-shadow: 0 4px 0 #4436C9;
+  transition: transform .05s ease;
+}
+.btn-primary:active { box-shadow: 0 1px 0 #4436C9; transform: translateY(3px); }
+.btn-secondary {
+  width: 100%; background: #fff; color: #5B4BF7; border: 2px solid #E5E2F0; border-radius: 16px;
+  padding: 15px; font-size: 16px; font-weight: 800; box-shadow: 0 4px 0 #E5E2F0;
+}
+.btn-secondary:hover { background: #F7F6FD; }
+
+.press:active { transform: translateY(2px); }
+
+::-webkit-scrollbar { width: 0; height: 0; }
