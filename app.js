@@ -30,7 +30,7 @@ function poko(mood, px) {
 const CLIPS = [
   { label: '오늘도 반가워요', hint: '매일 5분, 시험에 잘 나오는 순서로', src: 'https://d8j0ntlcm91z4.cloudfront.net/user_3CDQYaE0WVY3MST2ktDWtEYwngN/hf_20260814_144811_c16470a8-ecbc-42ba-8490-e9dee72688b8.mp4' },
   { label: '단어집 펼치는 중', hint: '파트별·주제별로 정리된 핵심 표현', src: 'https://d8j0ntlcm91z4.cloudfront.net/user_3CDQYaE0WVY3MST2ktDWtEYwngN/hf_20260814_144811_03f2d6a5-1849-4ee2-a48a-3efb0d1ef7ec.mp4' },
-  { label: '한 세트 끝냈을 때', hint: '레슨 하나 끝낼 때마다 XP와 보석 획득', src: 'https://d8j0ntlcm91z4.cloudfront.net/user_3CDQYaE0WVY3MST2ktDWtEYwngN/hf_20260814_144821_2d68c762-4940-4a96-9490-1513f574083a.mp4' },
+  { label: '한 세트 끝냈을 때', hint: '레슨 하나 끝낼 때마다 스트릭이 쌓여요', src: 'https://d8j0ntlcm91z4.cloudfront.net/user_3CDQYaE0WVY3MST2ktDWtEYwngN/hf_20260814_144821_2d68c762-4940-4a96-9490-1513f574083a.mp4' },
 ];
 
 /* ============================================================
@@ -54,7 +54,7 @@ class DCLogic {
 class Component extends DCLogic {
   state = {
     view: 'splash', tab: 'learn', W: [], SEC: [], P5: [], PT: [], TOPICS: [], TOF: {},
-    goal: 850, hearts: 5, xp: 0, gems: 240, streak: 3, done: {}, run: null, res: null,
+    goal: 850, hearts: 5, streak: 3, done: {}, run: null, res: null,
     brIdx: 0, brFlip: false, brDx: 0, brDrag: false, brMark: {}, brSel: null,
     wordMode: 'both', reveal: {}, miss: {}, saved: {}, wordFilter: 'all', wordPart: 'all', wordTopic: 'all', started: {},
     user: null, guestMode: false, authMode: 'signup', authStep: 'choice', name: '', email: '', pw: '',
@@ -76,15 +76,6 @@ class Component extends DCLogic {
   addMiss(wi) {
     if (wi == null) return;
     this.setState({ miss: { ...this.state.miss, [wi]: (this.state.miss[wi] || 0) + 1 } });
-  }
-
-  // 복습 주기: 많이 틀린 단어는 오늘, 한 번 틀린 단어는 3일, 훑기에서 확인한 단어는 7일 뒤
-  reviewBuckets() {
-    const S = this.state;
-    const today = [], d3 = [];
-    Object.keys(S.miss).forEach((i) => { (S.miss[i] >= 2 ? today : d3).push(+i); });
-    const d7 = Object.keys(S.brMark).filter((i) => S.brMark[i] === 'yes' && !S.miss[i]).map((i) => +i);
-    return { today, d3, d7 };
   }
 
   brAdvance(dir) {
@@ -111,13 +102,13 @@ class Component extends DCLogic {
       if (saved && saved.user) this.setState({ ...saved, guestMode: false, view: 'path', tab: 'learn', run: null, res: null });
       else if (guestSaved) this.setState({ ...guestSaved, user: null, guestMode: true, view: 'path', tab: 'learn', run: null, res: null });
       else this.setState({ view: 'intro' });
-    }, 1400);
+    }, 2400);
   }
 
   persist(extra) {
     const S = { ...this.state, ...(extra || {}) };
     if (!S.user && !S.guestMode) return;
-    const keep = { user: S.user, goal: S.goal, xp: S.xp, gems: S.gems, streak: S.streak, done: S.done, started: S.started, saved: S.saved, miss: S.miss, brMark: S.brMark };
+    const keep = { user: S.user, goal: S.goal, streak: S.streak, done: S.done, started: S.started, saved: S.saved, miss: S.miss, brMark: S.brMark };
     const key = S.user ? 'poko:session' : 'poko:guest-session';
     try { localStorage.setItem(key, JSON.stringify(keep)); } catch (e) {}
   }
@@ -136,7 +127,7 @@ class Component extends DCLogic {
 
   logout() {
     try { localStorage.removeItem('poko:session'); localStorage.removeItem('poko:guest-session'); } catch (e) {}
-    this.setState({ user: null, guestMode: false, view: 'intro', authStep: 'choice', done: {}, started: {}, saved: {}, miss: {}, brMark: {}, xp: 0, name: '', email: '', pw: '' });
+    this.setState({ user: null, guestMode: false, view: 'intro', authStep: 'choice', done: {}, started: {}, saved: {}, miss: {}, brMark: {}, name: '', email: '', pw: '' });
   }
 
   // 시험에서 가장 자주 나오는 파트 기준 분류 (고득점 세트는 별도 티어)
@@ -186,15 +177,8 @@ class Component extends DCLogic {
     });
   }
 
-  startReview(idxs) {
-    const words = idxs.map((i) => this.state.W[i]).filter(Boolean).slice(0, 7);
-    if (!words.length) return;
-    const qs = this.wordQuestions(words);
-    this.setState({ view: 'lesson', tab: 'learn', run: { node: { id: 'review', label: '복습 노트' }, qs, pos: 0, picked: null, checked: false, right: 0, hearts: this.state.hearts, combo: 0 } });
-  }
-
   start(node) {
-    if (node.kind === 'chest') { this.setState({ gems: this.state.gems + 30, done: { ...this.state.done, [node.id]: true } }); return; }
+    if (node.kind === 'chest') { this.setState({ done: { ...this.state.done, [node.id]: true } }); return; }
     const qs = this.makeQuestions(node);
     if (!qs.length) return;
     const hearts = this.state.hearts > 0 ? this.state.hearts : 5;
@@ -218,11 +202,10 @@ class Component extends DCLogic {
     const last = r.pos + 1 >= r.qs.length || r.hearts <= 0;
     if (last) {
       if (r.hearts > 0) Sound.done();
-      const gained = r.right * 10 + (r.right === r.qs.length ? 20 : 0);
       this.setState({
-        view: 'res', hearts: Math.max(r.hearts, 0), xp: this.state.xp + gained, gems: this.state.gems + (r.hearts > 0 ? 5 : 0),
+        view: 'res', hearts: Math.max(r.hearts, 0),
         done: r.hearts > 0 ? { ...this.state.done, [r.node.id]: true } : this.state.done,
-        res: { node: r.node, right: r.right, total: r.qs.length, gained, failed: r.hearts <= 0 },
+        res: { node: r.node, right: r.right, total: r.qs.length, failed: r.hearts <= 0 },
       });
       return;
     }
@@ -381,7 +364,7 @@ class Component extends DCLogic {
     v.nextFg = S.goal ? '#fff' : '#BDB8D4';
     v.nextShadow = S.goal ? '#4436C9' : '#E5E2F0';
 
-    v.streak = S.streak; v.gems = S.gems; v.hearts = S.hearts; v.goalMin = S.goal;
+    v.streak = S.streak; v.hearts = S.hearts; v.goalMin = S.goal;
     v.tabs = [['learn', '학습', '⌂'], ['browse', '훑기', '⇄'], ['words', '단어', '▤'], ['me', '내 정보', '☺']].map(([id, label, icon]) => ({
       label, icon, go: () => this.setState({ tab: id }),
       bg: S.tab === id ? '#EEEBFF' : 'transparent',
@@ -504,14 +487,18 @@ class Component extends DCLogic {
 
     v.stats = [
       { icon: '▲', color: '#FFB020', value: S.streak, label: '연속 학습일' },
-      { icon: '✦', color: '#5B4BF7', value: S.xp, label: '총 XP' },
-      { icon: '◆', color: '#3DBBE0', value: S.gems, label: '보석' },
       { icon: '✓', color: '#7BD94F', value: v.doneCount, label: '완료한 레슨' },
     ];
 
-    // 헷갈린 단어 / 주기적 복습 노트 (내 정보 탭 — 원본 데이터-스크립트에는
-    // 화면만 있고 값이 비어 있던 부분을 기존 reviewBuckets()/miss 상태로 채운다)
+    // 나만의 단어장(저장) / 헷갈린 단어(오답) — 내 정보 탭
     {
+      const savedEntries = Object.keys(S.saved).map((i) => S.W[+i]).filter(Boolean);
+      v.savedWordCount = savedEntries.length;
+      v.hasSavedWords = savedEntries.length > 0;
+      v.noSavedWords = savedEntries.length === 0;
+      v.savedWordList = savedEntries.slice(0, 4).map((w) => ({ term: w.term, meaning: w.meaning }));
+      v.browseSaved = () => this.setState({ tab: 'browse' }, () => this.brOpen({ kind: 'saved', label: '나만의 단어장' }));
+
       const missEntries = Object.keys(S.miss)
         .map((i) => ({ i: +i, w: S.W[+i], count: S.miss[i] }))
         .filter((x) => x.w)
@@ -521,19 +508,6 @@ class Component extends DCLogic {
       v.noMiss = missEntries.length === 0;
       v.missList = missEntries.slice(0, 4).map((x) => ({ term: x.w.term, meaning: x.w.meaning, count: x.count }));
       v.browseMiss = () => this.setState({ tab: 'browse' }, () => this.brOpen({ kind: 'miss', label: '헷갈린 단어' }));
-
-      const buckets = this.reviewBuckets();
-      v.revBuckets = [
-        { label: '오늘 복습', hint: '두 번 이상 틀린 단어', count: buckets.today.length, bg: '#FFF7F8', color: '#E23B4E' },
-        { label: '3일 뒤 복습', hint: '한 번 틀린 단어', count: buckets.d3.length, bg: '#FFF7ED', color: '#D99F1C' },
-        { label: '7일 뒤 복습', hint: '훑기에서 "알아요"로 확인한 단어', count: buckets.d7.length, bg: '#F0EEF9', color: '#5B4BF7' },
-      ];
-      const due = buckets.today.concat(buckets.d3, buckets.d7);
-      v.revBg = due.length ? '#5B4BF7' : '#F0EEF9';
-      v.revFg = due.length ? '#fff' : '#BDB8D4';
-      v.revShadow = due.length ? '#4436C9' : '#E5E2F0';
-      v.revLabel = due.length ? '복습 시작하기 (' + due.length + ')' : '오늘은 복습할 단어가 없어요';
-      v.startReviewGo = () => { if (due.length) this.startReview(due); };
     }
 
     // lesson
@@ -594,17 +568,10 @@ class Component extends DCLogic {
       v.resMood = R.failed ? 'oh' : (R.right === R.total ? 'wink' : 'happy');
       v.resShadow = R.failed ? '#D8404F' : '#5CB636';
       v.resTitle = R.failed ? '하트가 없어요' : '레슨 완료!';
-      v.canRefill = R.failed;
-      v.refillLabel = S.gems >= 50 ? '보석 50개로 하트 채우기' : '보석이 부족해요';
-      v.refillBg = S.gems >= 50 ? '#3DBBE0' : '#F0EEF9';
-      v.refillFg = S.gems >= 50 ? '#fff' : '#BDB8D4';
-      v.refillShadow = S.gems >= 50 ? '#2A96B5' : '#E5E2F0';
-      v.refill = () => { if (S.gems >= 50) this.setState({ gems: S.gems - 50, hearts: 5 }); };
       v.resSub = R.failed
-        ? '보석으로 하트를 채우거나, 다음 세트를 시작하면 하트가 다시 5개로 채워져요.'
+        ? '다음 세트를 시작하면 하트가 다시 5개로 채워져요.'
         : R.node.label + ' · ' + R.total + '문항 중 ' + R.right + '개 정답';
       v.resCards = [
-        { label: '획득 XP', icon: '✦', value: R.gained, color: '#FFB020' },
         { label: '정확도', icon: '◎', value: Math.round((R.right / R.total) * 100) + '%', color: '#5B4BF7' },
         { label: '남은 하트', icon: '♥', value: Math.max(S.hearts, 0), color: '#FF5A6E' },
       ];
@@ -628,9 +595,12 @@ const wrap = (inner, extra = '') => `<div style="position:absolute;inset:0;${ext
 
 function screenSplash() {
   return wrap(`
-    <div style="position:absolute;inset:0;background:#5B4BF7;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:26px">
-      <div style="animation:bob 2s ease-in-out infinite">${poko('front', 92)}</div>
-      <div class="brand-logo" style="font-size:38px;color:#fff">poko</div>
+    <div style="position:absolute;inset:0;background:#5B4BF7;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:22px">
+      <div style="animation:splashGrow 1.1s cubic-bezier(.34,1.56,.64,1) both, bob 2s ease-in-out 1.1s infinite">${poko('front', 156)}</div>
+      <div style="display:flex;flex-direction:column;align-items:center;gap:6px;animation:splashFadeUp .6s ease .7s both">
+        <div class="brand-logo" style="font-size:20px;color:#fff;opacity:.92">안녕하세요! 오늘도 반가워요</div>
+        <div class="brand-logo" style="font-size:38px;color:#fff">poko</div>
+      </div>
     </div>`);
 }
 
@@ -655,95 +625,95 @@ function screenIntro(v) {
 
 function screenAuthChoice(v) {
   return wrap(`
-    <div style="position:absolute;inset:0;display:flex;flex-direction:column;padding:30px 22px 30px;background:#fff;overflow:auto">
-      <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding-bottom:8px">
+    <div style="position:absolute;inset:0;display:flex;flex-direction:column;padding:22px 22px 20px;background:#fff;overflow:auto">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding-bottom:6px">
         <button data-act="${on(v.goIntro)}" style="font-size:24px;color:#C3BFD8;width:24px;text-align:left">‹</button>
         <span style="display:flex;align-items:center;gap:6px;font-size:12.5px;font-weight:700;color:#7A749A">
           <span>${esc(v.switchAsk)}</span>
           <button data-act="${on(v.toggleAuth)}" style="font-size:12.5px;font-weight:800;color:#5B4BF7">${esc(v.switchCta)}</button>
         </span>
       </div>
-      <div style="display:flex;flex-direction:column;align-items:center;gap:14px;padding:18px 0 26px">
-        ${poko('calm', 112)}
-        <span style="font-size:26px;font-weight:800;letter-spacing:-.02em">${esc(v.authTitle)}</span>
-        <span style="font-size:13.5px;font-weight:700;color:#7A749A;text-align:center;line-height:1.6">${esc(v.authHint)}</span>
+      <div style="display:flex;flex-direction:column;align-items:center;gap:10px;padding:10px 0 18px">
+        ${poko('calm', 82)}
+        <span style="font-size:23px;font-weight:800;letter-spacing:-.02em">${esc(v.authTitle)}</span>
+        <span style="font-size:13px;font-weight:700;color:#7A749A;text-align:center;line-height:1.5">${esc(v.authHint)}</span>
       </div>
-      <div style="display:flex;flex-direction:column;gap:10px">
+      <div style="display:flex;flex-direction:column;gap:8px">
         ${v.socials.map((s) => `
-        <button class="press" data-act="${on(s.go)}" style="display:flex;align-items:center;justify-content:center;gap:10px;background:${s.bg};color:${s.fg};border:2px solid ${s.border};border-radius:16px;padding:15px;font-size:14.5px;font-weight:800;box-shadow:0 3px 0 ${s.shadow}">
+        <button class="press" data-act="${on(s.go)}" style="display:flex;align-items:center;justify-content:center;gap:10px;background:${s.bg};color:${s.fg};border:2px solid ${s.border};border-radius:16px;padding:14px;font-size:14.5px;font-weight:800;box-shadow:0 3px 0 ${s.shadow}">
           <span style="font-size:15px;width:18px;text-align:center">${s.icon}</span><span>${esc(s.label)}</span>
         </button>`).join('')}
       </div>
-      <button data-act="${on(v.continueGuest)}" style="font-size:13px;font-weight:800;color:#A29CBE;padding-top:16px">로그인 없이 둘러보기</button>
+      <button data-act="${on(v.continueGuest)}" style="font-size:13px;font-weight:800;color:#A29CBE;padding-top:12px">로그인 없이 둘러보기</button>
       <div style="flex:1"></div>
-      <div style="font-size:11.5px;font-weight:700;color:#C3BFD8;text-align:center;line-height:1.6;padding-top:16px">계속하면 poko의 이용약관과 개인정보 처리방침에 동의하게 됩니다.</div>
+      <div style="font-size:11.5px;font-weight:700;color:#C3BFD8;text-align:center;line-height:1.5;padding-top:10px">계속하면 poko의 이용약관과 개인정보 처리방침에 동의하게 됩니다.</div>
     </div>`);
 }
 
 function screenAuthForm(v) {
   return wrap(`
-    <div style="position:absolute;inset:0;overflow:auto;padding:30px 22px 30px;background:#fff">
-      <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding-bottom:18px">
+    <div style="position:absolute;inset:0;overflow:auto;padding:22px 22px 20px;background:#fff">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding-bottom:12px">
         <button data-act="${on(v.backToChoice)}" style="font-size:24px;color:#C3BFD8;width:24px;text-align:left">‹</button>
         <span style="display:flex;align-items:center;gap:6px;font-size:12.5px;font-weight:700;color:#7A749A">
           <span>${esc(v.switchAsk)}</span>
           <button data-act="${on(v.toggleAuth)}" style="font-size:12.5px;font-weight:800;color:#5B4BF7">${esc(v.switchCta)}</button>
         </span>
       </div>
-      <div style="font-size:21px;font-weight:800;letter-spacing:-.02em;padding-bottom:6px">${esc(v.formTitle)}</div>
-      <div style="font-size:13px;font-weight:700;color:#7A749A;line-height:1.6;padding-bottom:20px">${esc(v.formSub)}</div>
-      <div style="display:flex;flex-direction:column;gap:10px">
+      <div style="font-size:20px;font-weight:800;letter-spacing:-.02em;padding-bottom:4px">${esc(v.formTitle)}</div>
+      <div style="font-size:12.5px;font-weight:700;color:#7A749A;line-height:1.5;padding-bottom:14px">${esc(v.formSub)}</div>
+      <div style="display:flex;flex-direction:column;gap:8px">
         ${v.isSignup ? `
         <div style="position:relative;display:flex;align-items:center">
-          <input data-focus-key="name" data-oninput="${on(v.onName)}" value="${esc(v.name)}" placeholder="이름" style="width:100%;border:2px solid ${v.nameBorder};border-radius:16px;padding:15px 44px 15px 16px;font-size:15px;font-weight:700;color:#2B2545;outline:none">
+          <input data-focus-key="name" data-oninput="${on(v.onName)}" value="${esc(v.name)}" placeholder="이름" style="width:100%;border:2px solid ${v.nameBorder};border-radius:16px;padding:13px 44px 13px 16px;font-size:15px;font-weight:700;color:#2B2545;outline:none">
           <span style="position:absolute;right:16px;font-size:15px;font-weight:900;color:${v.nameCheck}">✓</span>
         </div>` : ''}
         <div style="position:relative;display:flex;align-items:center">
-          <input data-focus-key="email" data-oninput="${on(v.onEmail)}" value="${esc(v.email)}" placeholder="이메일 주소" type="email" style="width:100%;border:2px solid ${v.emailBorder};border-radius:16px;padding:15px 44px 15px 16px;font-size:15px;font-weight:700;color:#2B2545;outline:none">
+          <input data-focus-key="email" data-oninput="${on(v.onEmail)}" value="${esc(v.email)}" placeholder="이메일 주소" type="email" style="width:100%;border:2px solid ${v.emailBorder};border-radius:16px;padding:13px 44px 13px 16px;font-size:15px;font-weight:700;color:#2B2545;outline:none">
           <span style="position:absolute;right:16px;font-size:15px;font-weight:900;color:${v.emailCheck}">✓</span>
         </div>
         <div style="position:relative;display:flex;align-items:center">
-          <input data-focus-key="pw" data-oninput="${on(v.onPw)}" value="${esc(v.pw)}" placeholder="비밀번호 (8자 이상)" type="password" style="width:100%;border:2px solid ${v.pwBorder};border-radius:16px;padding:15px 44px 15px 16px;font-size:15px;font-weight:700;color:#2B2545;outline:none">
+          <input data-focus-key="pw" data-oninput="${on(v.onPw)}" value="${esc(v.pw)}" placeholder="비밀번호 (8자 이상)" type="password" style="width:100%;border:2px solid ${v.pwBorder};border-radius:16px;padding:13px 44px 13px 16px;font-size:15px;font-weight:700;color:#2B2545;outline:none">
           <span style="position:absolute;right:16px;font-size:15px;font-weight:900;color:${v.pwCheck}">✓</span>
         </div>
       </div>
       ${v.isSignup ? `
-      <div style="background:#F7F6FD;border-radius:14px;padding:14px 16px;margin-top:12px;display:flex;flex-direction:column;gap:6px">
-        <span style="font-size:12px;font-weight:800;color:#7A749A">비밀번호 조건</span>
-        ${v.pwRules.map((c) => `<span style="display:flex;align-items:center;gap:8px;font-size:12px;font-weight:700;color:${c.color}"><span style="width:14px">${c.mark}</span><span>${esc(c.label)}</span></span>`).join('')}
+      <div style="background:#F7F6FD;border-radius:14px;padding:10px 14px;margin-top:8px;display:flex;flex-direction:column;gap:4px">
+        <span style="font-size:11.5px;font-weight:800;color:#7A749A">비밀번호 조건</span>
+        ${v.pwRules.map((c) => `<span style="display:flex;align-items:center;gap:8px;font-size:11.5px;font-weight:700;color:${c.color}"><span style="width:14px">${c.mark}</span><span>${esc(c.label)}</span></span>`).join('')}
       </div>` : ''}
-      <div style="font-size:11.5px;font-weight:700;color:#A29CBE;line-height:1.6;padding:16px 2px 18px">계속하면 poko의 이용약관과 개인정보 처리방침에 동의하게 됩니다.</div>
-      <button class="press" data-act="${on(v.submitAuth)}" style="width:100%;background:${v.authBg};color:${v.authFg};border-radius:16px;padding:17px;font-size:16px;font-weight:800;box-shadow:0 4px 0 ${v.authShadow}">${esc(v.authCta)}</button>
-      <div style="display:flex;align-items:center;gap:10px;padding:18px 0">
+      <div style="font-size:11px;font-weight:700;color:#A29CBE;line-height:1.5;padding:10px 2px 12px">계속하면 poko의 이용약관과 개인정보 처리방침에 동의하게 됩니다.</div>
+      <button class="press" data-act="${on(v.submitAuth)}" style="width:100%;background:${v.authBg};color:${v.authFg};border-radius:16px;padding:16px;font-size:16px;font-weight:800;box-shadow:0 4px 0 ${v.authShadow}">${esc(v.authCta)}</button>
+      <div style="display:flex;align-items:center;gap:10px;padding:14px 0">
         <span style="flex:1;height:2px;background:#F0EEF9"></span>
         <span style="font-size:11.5px;font-weight:800;color:#C3BFD8">또는</span>
         <span style="flex:1;height:2px;background:#F0EEF9"></span>
       </div>
-      <div style="display:flex;justify-content:center;gap:10px;padding-bottom:10px">
-        ${v.socialIcons.map((s) => `<button class="press" data-act="${on(s.go)}" style="width:52px;height:52px;border-radius:50%;background:${s.bg};color:${s.fg};border:2px solid ${s.border};font-size:17px;font-weight:800;display:flex;align-items:center;justify-content:center">${s.icon}</button>`).join('')}
+      <div style="display:flex;justify-content:center;gap:10px;padding-bottom:4px">
+        ${v.socialIcons.map((s) => `<button class="press" data-act="${on(s.go)}" style="width:46px;height:46px;border-radius:50%;background:${s.bg};color:${s.fg};border:2px solid ${s.border};font-size:16px;font-weight:800;display:flex;align-items:center;justify-content:center">${s.icon}</button>`).join('')}
       </div>
     </div>`);
 }
 
 function screenAsk(v) {
   return wrap(`
-    <div style="position:absolute;inset:0;display:flex;flex-direction:column;padding:30px 20px 30px">
+    <div style="position:absolute;inset:0;display:flex;flex-direction:column;padding:22px 20px 22px">
       <div style="display:flex;align-items:center;gap:14px;padding-bottom:6px">
         <button data-act="${on(v.goIntro)}" style="font-size:24px;color:#C3BFD8;width:24px;text-align:left">‹</button>
         <div style="flex:1;height:14px;border-radius:99px;background:#F0EEF9;overflow:hidden"><div style="height:100%;width:14%;background:#FFB020;border-radius:99px"></div></div>
       </div>
-      <div style="display:flex;align-items:flex-end;gap:10px;padding:26px 0 22px">
-        ${poko('3q', 50)}
-        <div style="position:relative;flex:1;border:2px solid #E5E2F0;border-radius:16px;padding:14px 16px;font-size:15px;font-weight:700;line-height:1.55;margin-bottom:16px">딱 하나만 물어볼게요.<br>목표 점수가 어떻게 되나요?</div>
+      <div style="display:flex;align-items:flex-end;gap:10px;padding:18px 0 16px">
+        ${poko('3q', 48)}
+        <div style="position:relative;flex:1;border:2px solid #E5E2F0;border-radius:16px;padding:12px 14px;font-size:14.5px;font-weight:700;line-height:1.5;margin-bottom:14px">딱 하나만 물어볼게요.<br>목표 점수가 어떻게 되나요?</div>
       </div>
-      <div style="display:flex;flex-direction:column;gap:10px">
+      <div style="display:flex;flex-direction:column;gap:8px">
         ${v.goals.map((g) => `
-        <button class="press" data-act="${on(g.pick)}" style="display:flex;align-items:center;justify-content:space-between;gap:12px;background:${g.bg};border:2px solid ${g.border};border-radius:16px;padding:16px 18px;box-shadow:0 3px 0 ${g.border}">
-          <span style="font-size:15.5px;font-weight:800;color:${g.fg}">${esc(g.label)}</span><span style="font-size:13px;font-weight:700;color:#A29CBE">${esc(g.sub)}</span>
+        <button class="press" data-act="${on(g.pick)}" style="display:flex;align-items:center;justify-content:space-between;gap:12px;background:${g.bg};border:2px solid ${g.border};border-radius:16px;padding:14px 18px;box-shadow:0 3px 0 ${g.border}">
+          <span style="font-size:15px;font-weight:800;color:${g.fg}">${esc(g.label)}</span><span style="font-size:12.5px;font-weight:700;color:#A29CBE">${esc(g.sub)}</span>
         </button>`).join('')}
       </div>
       <div style="flex:1"></div>
-      <button class="press" data-act="${on(v.goSignup)}" style="width:100%;background:${v.nextBg};color:${v.nextFg};border-radius:16px;padding:17px;font-size:16px;font-weight:800;box-shadow:0 4px 0 ${v.nextShadow}">계속하기</button>
+      <button class="press" data-act="${on(v.goSignup)}" style="width:100%;background:${v.nextBg};color:${v.nextFg};border-radius:16px;padding:16px;font-size:16px;font-weight:800;box-shadow:0 4px 0 ${v.nextShadow}">계속하기</button>
     </div>`);
 }
 
@@ -751,7 +721,6 @@ function topBar(v) {
   return `
   <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:14px 20px 14px">
     <div class="brand-logo" style="display:flex;align-items:center;gap:6px;font-size:17px;color:#FFB020"><span style="font-size:18px">▲</span><span>${v.streak}</span></div>
-    <div class="brand-logo" style="display:flex;align-items:center;gap:6px;font-size:17px;color:#3DBBE0"><span style="font-size:15px">◆</span><span>${v.gems}</span></div>
     <div class="brand-logo" style="display:flex;align-items:center;gap:6px;font-size:17px;color:#FF5A6E"><span style="font-size:16px">♥</span><span>${v.hearts}</span></div>
   </div>`;
 }
@@ -847,10 +816,31 @@ function screenMe(v) {
           <span style="font-size:12px;font-weight:700;color:#7A749A">${esc(s.label)}</span>
         </div>`).join('')}
       </div>
-      <div style="background:#fff;border:2px solid #FFD3D9;border-radius:20px;padding:18px;margin-top:12px;display:flex;flex-direction:column;gap:12px">
+      <div style="background:#fff;border:2px solid #D9D3F5;border-radius:20px;padding:18px;margin-top:12px;display:flex;flex-direction:column;gap:12px">
         <div style="display:flex;align-items:center;justify-content:space-between;gap:10px">
           <span style="display:flex;flex-direction:column;gap:2px">
-            <span style="font-size:15.5px;font-weight:800">헷갈린 영어 단어장</span>
+            <span style="font-size:15.5px;font-weight:800">나만의 단어장</span>
+            <span style="font-size:12px;font-weight:700;color:#A29CBE">★ 눌러서 저장한 단어</span>
+          </span>
+          <span class="stat-num" style="font-size:22px;color:#5B4BF7;flex:none">${v.savedWordCount}</span>
+        </div>
+        ${v.hasSavedWords ? `
+        <div style="display:flex;flex-direction:column;gap:8px">
+          ${v.savedWordList.map((w) => `
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;background:#F7F6FD;border-radius:12px;padding:11px 13px">
+            <span style="display:flex;flex-direction:column;gap:2px;min-width:0">
+              <span class="stat-num" style="font-size:14.5px">${esc(w.term)}</span>
+              <span style="font-size:12px;font-weight:700;color:#7A749A;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(w.meaning)}</span>
+            </span>
+          </div>`).join('')}
+        </div>
+        <button class="press" data-act="${on(v.browseSaved)}" style="width:100%;background:#5B4BF7;color:#fff;border-radius:14px;padding:14px;font-size:14.5px;font-weight:800;box-shadow:0 3px 0 #4436C9">저장한 단어 카드로 넘겨보기</button>
+        ` : `<div style="font-size:13px;font-weight:700;color:#C3BFD8;line-height:1.6;padding:6px 0">아직 없어요. 단어 카드나 레슨에서 ★을 눌러 저장하면 여기 모입니다.</div>`}
+      </div>
+      <div style="background:#fff;border:2px solid #FFD3D9;border-radius:20px;padding:18px;margin-top:10px;display:flex;flex-direction:column;gap:12px">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:10px">
+          <span style="display:flex;flex-direction:column;gap:2px">
+            <span style="font-size:15.5px;font-weight:800">헷갈린 단어</span>
             <span style="font-size:12px;font-weight:700;color:#A29CBE">틀리거나 헷갈린다고 넘긴 단어</span>
           </span>
           <span class="stat-num" style="font-size:22px;color:#E23B4E;flex:none">${v.missCount}</span>
@@ -868,24 +858,6 @@ function screenMe(v) {
         </div>
         <button class="press" data-act="${on(v.browseMiss)}" style="width:100%;background:#FF5A6E;color:#fff;border-radius:14px;padding:14px;font-size:14.5px;font-weight:800;box-shadow:0 3px 0 #D8404F">헷갈린 단어 카드로 넘겨보기</button>
         ` : `<div style="font-size:13px;font-weight:700;color:#C3BFD8;line-height:1.6;padding:6px 0">아직 없어요. 레슨에서 틀린 단어와 훑기에서 "헷갈려요"로 넘긴 단어가 여기 모입니다.</div>`}
-      </div>
-      <div style="background:#fff;border:2px solid #EFEDF7;border-radius:20px;padding:18px;margin-top:10px;display:flex;flex-direction:column;gap:12px">
-        <span style="display:flex;flex-direction:column;gap:2px">
-          <span style="font-size:15.5px;font-weight:800">주기적 복습 노트</span>
-          <span style="font-size:12px;font-weight:700;color:#A29CBE">틀린 횟수에 따라 복습 간격이 자동으로 정해져요</span>
-        </span>
-        <div style="display:flex;flex-direction:column;gap:8px">
-          ${v.revBuckets.map((b) => `
-          <div style="display:flex;align-items:center;gap:12px;background:${b.bg};border-radius:12px;padding:12px 14px">
-            <span style="width:8px;height:8px;border-radius:50%;background:${b.color};flex:none"></span>
-            <span style="flex:1;display:flex;flex-direction:column;gap:2px;min-width:0">
-              <span style="font-size:14px;font-weight:800;color:${b.color}">${esc(b.label)}</span>
-              <span style="font-size:11.5px;font-weight:700;color:#A29CBE">${esc(b.hint)}</span>
-            </span>
-            <span class="stat-num" style="font-size:18px;color:${b.color};flex:none">${b.count}</span>
-          </div>`).join('')}
-        </div>
-        <button class="press" data-act="${on(v.startReviewGo)}" style="width:100%;background:${v.revBg};color:${v.revFg};border-radius:14px;padding:14px;font-size:14.5px;font-weight:800;box-shadow:0 3px 0 ${v.revShadow}">${esc(v.revLabel)}</button>
       </div>
     </div>`);
 }
@@ -1032,7 +1004,7 @@ function screenRes(v) {
         <div style="animation:bob 2.2s ease-in-out infinite">${poko(v.resMood, 126)}</div>
         <div class="brand-logo" style="font-size:30px;color:${v.resColor};animation:pop .3s ease">${esc(v.resTitle)}</div>
         <div style="font-size:14.5px;font-weight:700;color:#7A749A;text-align:center;line-height:1.6">${esc(v.resSub)}</div>
-        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;width:100%;padding-top:8px">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;width:100%;padding-top:8px">
           ${v.resCards.map((c) => `
           <div style="border:2px solid ${c.color};border-radius:16px;overflow:hidden">
             <div style="background:${c.color};color:#fff;font-size:11px;font-weight:800;letter-spacing:.06em;padding:5px;text-align:center">${esc(c.label)}</div>
@@ -1040,7 +1012,6 @@ function screenRes(v) {
           </div>`).join('')}
         </div>
       </div>
-      ${v.canRefill ? `<button class="press" data-act="${on(v.refill)}" style="width:100%;background:${v.refillBg};color:${v.refillFg};border-radius:16px;padding:15px;font-size:14.5px;font-weight:800;box-shadow:0 4px 0 ${v.refillShadow};margin-bottom:8px">${esc(v.refillLabel)}</button>` : ''}
       <button class="press" data-act="${on(v.goPath)}" style="width:100%;background:${v.resColor};color:#fff;border-radius:16px;padding:17px;font-size:16px;font-weight:800;box-shadow:0 4px 0 ${v.resShadow}">계속하기</button>
     </div>`);
 }
