@@ -25,6 +25,9 @@ const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&':
 // 서버가 아직 안 떠 있거나 응답이 없어도 앱 자체는 게스트/로컬 로그인으로 계속 동작해야 하므로,
 // 이 서버를 쓰는 모든 요청은 실패해도 조용히 무시하고 넘어간다.
 const AUTH_BASE = 'https://poko-auth-server.onrender.com';
+// 구글/카카오 리디렉션 설정(콘솔 쪽 redirect URI 등)이 마무리될 때까지 소셜 로그인 버튼은 숨긴다.
+// 게스트로 시작하기 + 이메일 가입은 이 플래그와 무관하게 항상 동작한다. 준비되면 true로만 바꾸면 됨.
+const SHOW_OAUTH = false;
 
 function poko(mood, px) {
   return pokoHTML(mood, px);
@@ -380,13 +383,14 @@ class Component extends DCLogic {
     v.authCta = S.authBusy ? '처리 중…' : signup ? '가입하고 시작하기' : '로그인';
     v.submitAuth = () => { if (ready && !S.authBusy) this.submitAuthReal(); };
     v.authError = S.authError;
-    const SOCIAL = [
+    const SOCIAL = SHOW_OAUTH ? [
       { id: 'google', label: 'Google로 계속하기', icon: 'G', bg: '#fff', fg: '#2B2545', border: '#E5E2F0', shadow: '#E5E2F0' },
       { id: 'kakao', label: '카카오로 계속하기', icon: '●', bg: '#FFE24D', fg: '#3B2E00', border: '#FFE24D', shadow: '#D9BF17' },
-    ];
+    ] : [];
     v.socials = SOCIAL.map((s) => ({ ...s, go: () => this.startOAuth(s.id) }))
       .concat([{ label: signup ? '이메일로 계속하기' : '이메일로 로그인', icon: '✉', bg: '#fff', fg: '#2B2545', border: '#E5E2F0', shadow: '#E5E2F0', go: () => this.setState({ authStep: 'form' }) }]);
     v.socialIcons = SOCIAL.map((s) => ({ icon: s.icon, bg: s.bg, fg: s.fg, border: s.border, go: () => this.startOAuth(s.id) }));
+    v.hasSocialIcons = v.socialIcons.length > 0;
     v.continueGuest = () => this.continueAsGuest();
 
     v.isGuest = !S.user && S.guestMode;
@@ -683,13 +687,18 @@ function screenAuthChoice(v) {
         <span style="font-size:23px;font-weight:800;letter-spacing:-.02em">${esc(v.authTitle)}</span>
         <span style="font-size:13px;font-weight:700;color:#7A749A;text-align:center;line-height:1.5">${esc(v.authHint)}</span>
       </div>
+      <button class="press" data-act="${on(v.continueGuest)}" style="width:100%;background:#5B4BF7;color:#fff;border-radius:16px;padding:16px;font-size:15.5px;font-weight:800;box-shadow:0 4px 0 #4436C9;margin-bottom:14px">로그인 없이 시작하기</button>
+      <div style="display:flex;align-items:center;gap:10px;padding-bottom:14px">
+        <span style="flex:1;height:2px;background:#F0EEF9"></span>
+        <span style="font-size:11.5px;font-weight:800;color:#C3BFD8">또는</span>
+        <span style="flex:1;height:2px;background:#F0EEF9"></span>
+      </div>
       <div style="display:flex;flex-direction:column;gap:8px">
         ${v.socials.map((s) => `
         <button class="press" data-act="${on(s.go)}" style="display:flex;align-items:center;justify-content:center;gap:10px;background:${s.bg};color:${s.fg};border:2px solid ${s.border};border-radius:16px;padding:14px;font-size:14.5px;font-weight:800;box-shadow:0 3px 0 ${s.shadow}">
           <span style="font-size:15px;width:18px;text-align:center">${s.icon}</span><span>${esc(s.label)}</span>
         </button>`).join('')}
       </div>
-      <button data-act="${on(v.continueGuest)}" style="font-size:13px;font-weight:800;color:#A29CBE;padding-top:12px">로그인 없이 둘러보기</button>
       <div style="flex:1"></div>
       <div style="font-size:11.5px;font-weight:700;color:#C3BFD8;text-align:center;line-height:1.5;padding-top:10px">계속하면 poko의 이용약관과 개인정보 처리방침에 동의하게 됩니다.</div>
     </div>`);
@@ -730,6 +739,7 @@ function screenAuthForm(v) {
       ${v.authError ? `<div style="background:#FFF0F1;color:#E23B4E;border-radius:12px;padding:11px 14px;margin-top:10px;font-size:12.5px;font-weight:700;line-height:1.5">${esc(v.authError)}</div>` : ''}
       <div style="font-size:11px;font-weight:700;color:#A29CBE;line-height:1.5;padding:10px 2px 12px">계속하면 poko의 이용약관과 개인정보 처리방침에 동의하게 됩니다.</div>
       <button class="press" data-act="${on(v.submitAuth)}" style="width:100%;background:${v.authBg};color:${v.authFg};border-radius:16px;padding:16px;font-size:16px;font-weight:800;box-shadow:0 4px 0 ${v.authShadow}">${esc(v.authCta)}</button>
+      ${v.hasSocialIcons ? `
       <div style="display:flex;align-items:center;gap:10px;padding:14px 0">
         <span style="flex:1;height:2px;background:#F0EEF9"></span>
         <span style="font-size:11.5px;font-weight:800;color:#C3BFD8">또는</span>
@@ -737,7 +747,7 @@ function screenAuthForm(v) {
       </div>
       <div style="display:flex;justify-content:center;gap:10px;padding-bottom:4px">
         ${v.socialIcons.map((s) => `<button class="press" data-act="${on(s.go)}" style="width:46px;height:46px;border-radius:50%;background:${s.bg};color:${s.fg};border:2px solid ${s.border};font-size:16px;font-weight:800;display:flex;align-items:center;justify-content:center">${s.icon}</button>`).join('')}
-      </div>
+      </div>` : ''}
     </div>`);
 }
 
