@@ -21,6 +21,11 @@ const splitHi = (sent, word) => {
 
 const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
+// 실제 구글/카카오/이메일 로그인을 처리하는 공용 백엔드(auth_server, Render 배포).
+// 서버가 아직 안 떠 있거나 응답이 없어도 앱 자체는 게스트/로컬 로그인으로 계속 동작해야 하므로,
+// 이 서버를 쓰는 모든 요청은 실패해도 조용히 무시하고 넘어간다.
+const AUTH_BASE = 'https://poko-auth-server.onrender.com';
+
 function poko(mood, px) {
   return pokoHTML(mood, px);
 }
@@ -57,7 +62,7 @@ class Component extends DCLogic {
     goal: 850, hearts: 5, streak: 3, done: {}, run: null, res: null,
     brIdx: 0, brFlip: false, brDx: 0, brDrag: false, brMark: {}, brSel: null,
     wordMode: 'both', reveal: {}, miss: {}, saved: {}, wordFilter: 'all', wordPart: 'all', wordTopic: 'all', started: {},
-    user: null, guestMode: false, authMode: 'signup', authStep: 'choice', name: '', email: '', pw: '',
+    user: null, guestMode: false, authMode: 'signup', authStep: 'choice', name: '', email: '', pw: '', authError: '', authBusy: false,
   };
 
   brDeck() {
@@ -103,6 +108,45 @@ class Component extends DCLogic {
       else if (guestSaved) this.setState({ ...guestSaved, user: null, guestMode: true, view: 'path', tab: 'learn', run: null, res: null });
       else this.setState({ view: 'intro' });
     }, 2400);
+    this.checkRealSession();
+  }
+
+  // 실제 구글/카카오/이메일 로그인 백엔드(auth_server)에 세션이 남아있는지 확인한다.
+  // OAuth 리다이렉트로 막 돌아왔을 때와 새로고침할 때마다 호출되며, 서버가 응답하지 않아도
+  // (아직 배포 전이거나 Render가 잠들어 있어도) 게스트/로컬 로그인은 그대로 동작해야 하므로 조용히 무시한다.
+  checkRealSession() {
+    fetch(`${AUTH_BASE}/api/auth/me`, { credentials: 'include' })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (data && data.user && data.user.email) this.login({ email: data.user.email, name: data.user.name || data.user.email });
+      })
+      .catch(() => {});
+  }
+
+  // 구글/카카오 로그인 시작 — 서버로 전체 페이지 이동시켜 OAuth 동의 화면을 띄운다.
+  // redirect 쿼리로 지금 이 앱의 주소를 알려줘야 로그인 완료 후 정확히 여기로 돌아온다.
+  startOAuth(provider) {
+    const redirect = window.location.origin + window.location.pathname;
+    window.location.href = `${AUTH_BASE}/api/auth/${provider}?redirect=${encodeURIComponent(redirect)}`;
+  }
+
+  async submitAuthReal() {
+    const S = this.state;
+    const signup = S.authMode === 'signup';
+    this.setState({ authBusy: true, authError: '' });
+    try {
+      const res = await fetch(`${AUTH_BASE}/api/auth/${signup ? 'signup' : 'login'}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify(signup ? { email: S.email, password: S.pw, name: S.name } : { email: S.email, password: S.pw }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) { this.setState({ authBusy: false, authError: data.error || '오류가 발생했어요. 다시 시도해주세요.' }); return; }
+      this.login({ email: data.user.email, name: data.user.name });
+    } catch (e) {
+      this.setState({ authBusy: false, authError: '로그인 서버에 연결할 수 없어요. 잠시 후 다시 시도해주세요.' });
+    }
   }
 
   persist(extra) {
@@ -118,7 +162,7 @@ class Component extends DCLogic {
   login(user) {
     // 게스트로 쌓아둔 진행 기록은 그대로 계정에 이어붙인다 (초기화하지 않음).
     try { localStorage.removeItem('poko:guest-session'); } catch (e) {}
-    this.setState({ user, guestMode: false, view: 'path', tab: 'learn', authStep: 'choice', pw: '' }, () => this.persist());
+    this.setState({ user, guestMode: false, view: 'path', tab: 'learn', authStep: 'choice', pw: '', authBusy: false, authError: '' }, () => this.persist());
   }
 
   continueAsGuest() {
@@ -126,6 +170,7 @@ class Component extends DCLogic {
   }
 
   logout() {
+    fetch(`${AUTH_BASE}/api/auth/logout`, { method: 'POST', credentials: 'include' }).catch(() => {});
     try { localStorage.removeItem('poko:session'); localStorage.removeItem('poko:guest-session'); } catch (e) {}
     this.setState({ user: null, guestMode: false, view: 'intro', authStep: 'choice', done: {}, started: {}, saved: {}, miss: {}, brMark: {}, name: '', email: '', pw: '' });
   }
@@ -332,16 +377,16 @@ class Component extends DCLogic {
     v.authBg = ready ? '#5B4BF7' : '#F0EEF9';
     v.authFg = ready ? '#fff' : '#BDB8D4';
     v.authShadow = ready ? '#4436C9' : '#E5E2F0';
-    v.authCta = signup ? '가입하고 시작하기' : '로그인';
-    v.submitAuth = () => { if (ready) this.login({ email: S.email, name: signup ? S.name : S.email.split('@')[0] }); };
+    v.authCta = S.authBusy ? '처리 중…' : signup ? '가입하고 시작하기' : '로그인';
+    v.submitAuth = () => { if (ready && !S.authBusy) this.submitAuthReal(); };
+    v.authError = S.authError;
     const SOCIAL = [
-      { id: 'apple', label: 'Apple로 계속하기', icon: '', bg: '#2B2545', fg: '#fff', border: '#2B2545', shadow: '#151125', user: { email: 'apple@poko.app', name: 'Apple 사용자' } },
-      { id: 'google', label: 'Google로 계속하기', icon: 'G', bg: '#fff', fg: '#2B2545', border: '#E5E2F0', shadow: '#E5E2F0', user: { email: 'google@poko.app', name: 'Google 사용자' } },
-      { id: 'kakao', label: '카카오로 계속하기', icon: '●', bg: '#FFE24D', fg: '#3B2E00', border: '#FFE24D', shadow: '#D9BF17', user: { email: 'kakao@poko.app', name: '카카오 사용자' } },
+      { id: 'google', label: 'Google로 계속하기', icon: 'G', bg: '#fff', fg: '#2B2545', border: '#E5E2F0', shadow: '#E5E2F0' },
+      { id: 'kakao', label: '카카오로 계속하기', icon: '●', bg: '#FFE24D', fg: '#3B2E00', border: '#FFE24D', shadow: '#D9BF17' },
     ];
-    v.socials = SOCIAL.map((s) => ({ ...s, go: () => this.login(s.user) }))
+    v.socials = SOCIAL.map((s) => ({ ...s, go: () => this.startOAuth(s.id) }))
       .concat([{ label: signup ? '이메일로 계속하기' : '이메일로 로그인', icon: '✉', bg: '#fff', fg: '#2B2545', border: '#E5E2F0', shadow: '#E5E2F0', go: () => this.setState({ authStep: 'form' }) }]);
-    v.socialIcons = SOCIAL.map((s) => ({ icon: s.icon, bg: s.bg, fg: s.fg, border: s.border, go: () => this.login(s.user) }));
+    v.socialIcons = SOCIAL.map((s) => ({ icon: s.icon, bg: s.bg, fg: s.fg, border: s.border, go: () => this.startOAuth(s.id) }));
     v.continueGuest = () => this.continueAsGuest();
 
     v.isGuest = !S.user && S.guestMode;
@@ -682,6 +727,7 @@ function screenAuthForm(v) {
         <span style="font-size:11.5px;font-weight:800;color:#7A749A">비밀번호 조건</span>
         ${v.pwRules.map((c) => `<span style="display:flex;align-items:center;gap:8px;font-size:11.5px;font-weight:700;color:${c.color}"><span style="width:14px">${c.mark}</span><span>${esc(c.label)}</span></span>`).join('')}
       </div>` : ''}
+      ${v.authError ? `<div style="background:#FFF0F1;color:#E23B4E;border-radius:12px;padding:11px 14px;margin-top:10px;font-size:12.5px;font-weight:700;line-height:1.5">${esc(v.authError)}</div>` : ''}
       <div style="font-size:11px;font-weight:700;color:#A29CBE;line-height:1.5;padding:10px 2px 12px">계속하면 poko의 이용약관과 개인정보 처리방침에 동의하게 됩니다.</div>
       <button class="press" data-act="${on(v.submitAuth)}" style="width:100%;background:${v.authBg};color:${v.authFg};border-radius:16px;padding:16px;font-size:16px;font-weight:800;box-shadow:0 4px 0 ${v.authShadow}">${esc(v.authCta)}</button>
       <div style="display:flex;align-items:center;gap:10px;padding:14px 0">
