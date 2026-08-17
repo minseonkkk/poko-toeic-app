@@ -34,6 +34,7 @@ img, svg { max-width: 100%; }
 
 .app-shell {
   min-height: 100vh;
+  min-height: 100dvh;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -55,7 +56,13 @@ img, svg { max-width: 100%; }
 }
 @media (max-width: 459px) {
   .app-shell { padding: 0; }
-  .app-frame { border-radius: 0; box-shadow: none; max-width: 100%; min-height: 100vh; }
+  /* 모바일 사파리는 100vh를 주소창이 접힌 최대 화면 기준으로 계산해서,
+     주소창이 떠 있는 실제 화면보다 항상 더 크게 잡힌다 — 그 결과 하단
+     탭바(position:absolute;bottom:0)가 실제 보이는 화면 아래로 밀려나
+     페이지 전체를 끝까지 스크롤해야만 보이는 버그가 생긴다. 100dvh(동적
+     뷰포트 높이)로 고정 높이를 주면 항상 실제 보이는 화면 크기에 맞는다.
+     (100vh는 dvh 미지원 구형 브라우저용 폴백) */
+  .app-frame { border-radius: 0; box-shadow: none; max-width: 100%; min-height: 0; height: 100vh; height: 100dvh; }
 }
 
 .brand-logo { font-family: 'Nunito', sans-serif; font-weight: 900; letter-spacing: -.02em; }
