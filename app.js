@@ -1033,7 +1033,7 @@ function screenLesson(v) {
   return wrap(`
     <div style="position:absolute;inset:0;display:flex;flex-direction:column;padding:24px 18px 0;background:#fff">
       ${v.showStamp ? `
-      <div style="position:absolute;left:50%;top:38%;z-index:5;pointer-events:none;animation:stamp .9s cubic-bezier(.22,1.4,.36,1) forwards">
+      <div style="position:absolute;left:50%;top:38%;z-index:5;pointer-events:none;animation:stampPop .9s cubic-bezier(.22,1.4,.36,1) forwards, stampFade .9s linear forwards">
         <span class="brand-logo" style="display:inline-block;font-size:30px;color:#fff;background:${v.fbColor};padding:10px 22px;border-radius:14px;box-shadow:0 6px 0 ${v.fbShadow};white-space:nowrap">${esc(v.fbStamp)}</span>
       </div>` : ''}
       <div style="display:flex;align-items:center;gap:14px;padding:6px 0 20px">
