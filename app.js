@@ -618,9 +618,6 @@ class Component extends DCLogic {
       v.fbSub = r.ok ? 'rgba(63,158,46,.75)' : 'rgba(226,59,78,.75)';
       v.fbMark = r.ok ? '✓' : '!';
       v.fbTitle = r.ok ? (r.combo >= 3 ? r.combo + '연속 정답!' : '좋아요!') : '아쉬워요';
-      // 정답을 맞혔을 때 한 번 튕겨 나오는 큼직한 도장 텍스트 (듀오링고의 "PERFECT" 연출 참고)
-      v.showStamp = r.ok;
-      v.fbStamp = r.combo >= 3 ? '완벽해요!' : '정답이에요!';
       v.fbAnswer = '정답: ' + q.choices[q.answer];
       const target = q.type === 'meaning' ? q.prompt : q.choices[q.answer];
       const fh = splitHi(q.sentence, target);
@@ -1032,10 +1029,6 @@ function tabsBar(v) {
 function screenLesson(v) {
   return wrap(`
     <div style="position:absolute;inset:0;display:flex;flex-direction:column;padding:24px 18px 0;background:#fff">
-      ${v.showStamp ? `
-      <div style="position:absolute;left:50%;top:38%;z-index:5;pointer-events:none;animation:stampPop .9s cubic-bezier(.22,1.4,.36,1) forwards, stampFade .9s linear forwards">
-        <span class="brand-logo" style="display:inline-block;font-size:30px;color:#fff;background:${v.fbColor};padding:10px 22px;border-radius:14px;box-shadow:0 6px 0 ${v.fbShadow};white-space:nowrap">${esc(v.fbStamp)}</span>
-      </div>` : ''}
       <div style="display:flex;align-items:center;gap:14px;padding:6px 0 20px">
         <button data-act="${on(v.quit)}" style="font-size:22px;color:#C3BFD8;width:22px;text-align:left">×</button>
         <div style="flex:1;height:15px;border-radius:99px;background:#F0EEF9;overflow:hidden"><div style="height:100%;background:#7BD94F;border-radius:99px;width:${v.lessonPct}"></div></div>
