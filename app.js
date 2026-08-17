@@ -673,6 +673,7 @@ function screenIntro(v) {
       <button class="btn-primary" data-act="${on(v.goAsk)}">시작하기</button>
       <button class="btn-secondary" data-act="${on(v.goLogin)}">이미 계정이 있어요</button>
       <button data-act="${on(v.continueGuest)}" style="font-size:13px;font-weight:800;color:#A29CBE;padding-top:4px">로그인 없이 시작하기</button>
+      <div style="font-size:11px;font-weight:700;color:#C3BFD8;text-align:center;padding-top:2px">이메일로 시작하면 기록이 계정에 저장돼요 · 로그인 없이 시작하면 기록이 저장되지 않아요</div>
     </div>`);
 }
 
