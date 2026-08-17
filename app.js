@@ -42,6 +42,37 @@ const CLIPS = [
 ];
 
 /* ============================================================
+   브라우저 뒤로가기 지원 — 웹이라 기기/브라우저의 "뒤로가기"를 누르면
+   원래는 그냥 이 페이지 자체를 벗어나버린다. 이메일 폼·레슨·결과·훑기
+   카드처럼 "한 단계 들어간" 화면에 진입할 때만 history 항목을 하나
+   쌓아두고, popstate(뒤로가기)가 오면 지금 상태 기준으로 딱 한 단계
+   위 화면으로 돌아간다 — 각 화면 자체의 X/‹ 버튼과 동일한 동작이라
+   과거 상태를 통째로 저장/복원할 필요가 없다.
+   ============================================================ */
+let applyingPopState = false;
+
+function navKey(S) {
+  if (S.view === 'lesson') return 'lesson';
+  if (S.view === 'res') return 'res';
+  if (S.view === 'auth' && S.authStep === 'form') return 'auth-form';
+  if (S.view === 'auth') return 'auth-choice';
+  if (S.view === 'ask') return 'ask';
+  if (S.view === 'path' && S.tab === 'browse' && S.brSel) return 'browse-card';
+  return null;
+}
+
+function goUpOneLevel(S) {
+  const key = navKey(S);
+  if (key === 'lesson') return { view: 'path', tab: 'learn', run: null };
+  if (key === 'res') return { view: 'path', tab: 'learn', run: null, res: null };
+  if (key === 'auth-form') return { authStep: 'choice' };
+  if (key === 'auth-choice') return { view: 'intro' };
+  if (key === 'ask') return { view: 'intro' };
+  if (key === 'browse-card') return { brSel: null };
+  return null;
+}
+
+/* ============================================================
    최소 DCLogic 베이스 — 원본 Claude Design .dc.html 컴포넌트가
    기대하는 setState/componentDidMount/componentDidUpdate 계약만
    구현한다 (실제 프레임워크는 없음, 이 앱은 순수 vanilla JS).
@@ -49,7 +80,12 @@ const CLIPS = [
 class DCLogic {
   setState(patch, cb) {
     const next = typeof patch === 'function' ? patch(this.state) : patch;
+    const prevKey = navKey(this.state);
     this.state = Object.assign({}, this.state, next);
+    if (!applyingPopState) {
+      const key = navKey(this.state);
+      if (key && key !== prevKey) { try { history.pushState({ k: key }, ''); } catch (e) {} }
+    }
     if (this.componentDidUpdate) this.componentDidUpdate();
     scheduleRender();
     if (cb) cb();
@@ -706,15 +742,15 @@ function screenAuthForm(v) {
       <div style="display:flex;flex-direction:column;gap:8px">
         ${v.isSignup ? `
         <div style="position:relative;display:flex;align-items:center">
-          <input data-focus-key="name" data-oninput="${on(v.onName)}" value="${esc(v.name)}" placeholder="이름" style="width:100%;border:2px solid ${v.nameBorder};border-radius:16px;padding:13px 44px 13px 16px;font-size:15px;font-weight:700;color:#2B2545;outline:none">
+          <input data-focus-key="name" data-oninput="${on(v.onName)}" value="${esc(v.name)}" placeholder="이름" autocomplete="name" style="width:100%;border:2px solid ${v.nameBorder};border-radius:16px;padding:13px 44px 13px 16px;font-size:15px;font-weight:700;color:#2B2545;outline:none">
           <span style="position:absolute;right:16px;font-size:15px;font-weight:900;color:${v.nameCheck}">✓</span>
         </div>` : ''}
         <div style="position:relative;display:flex;align-items:center">
-          <input data-focus-key="email" data-oninput="${on(v.onEmail)}" value="${esc(v.email)}" placeholder="이메일 주소" type="email" style="width:100%;border:2px solid ${v.emailBorder};border-radius:16px;padding:13px 44px 13px 16px;font-size:15px;font-weight:700;color:#2B2545;outline:none">
+          <input data-focus-key="email" data-oninput="${on(v.onEmail)}" value="${esc(v.email)}" placeholder="이메일 주소" type="email" autocomplete="email" style="width:100%;border:2px solid ${v.emailBorder};border-radius:16px;padding:13px 44px 13px 16px;font-size:15px;font-weight:700;color:#2B2545;outline:none">
           <span style="position:absolute;right:16px;font-size:15px;font-weight:900;color:${v.emailCheck}">✓</span>
         </div>
         <div style="position:relative;display:flex;align-items:center">
-          <input data-focus-key="pw" data-oninput="${on(v.onPw)}" value="${esc(v.pw)}" placeholder="비밀번호 (8자 이상)" type="password" style="width:100%;border:2px solid ${v.pwBorder};border-radius:16px;padding:13px 44px 13px 16px;font-size:15px;font-weight:700;color:#2B2545;outline:none">
+          <input data-focus-key="pw" data-oninput="${on(v.onPw)}" value="${esc(v.pw)}" placeholder="비밀번호 (8자 이상)" type="password" autocomplete="${v.isSignup ? 'new-password' : 'current-password'}" style="width:100%;border:2px solid ${v.pwBorder};border-radius:16px;padding:13px 44px 13px 16px;font-size:15px;font-weight:700;color:#2B2545;outline:none">
           <span style="position:absolute;right:16px;font-size:15px;font-weight:900;color:${v.pwCheck}">✓</span>
         </div>
       </div>
@@ -1159,6 +1195,13 @@ function boot() {
   wireEvents();
   renderApp();
   comp.componentDidMount();
+  window.addEventListener('popstate', () => {
+    const patch = goUpOneLevel(comp.state);
+    if (!patch) return; // 더 갈 곳이 없으면 실제로 페이지를 벗어나게 둔다
+    applyingPopState = true;
+    comp.setState(patch);
+    applyingPopState = false;
+  });
 }
 
 if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
