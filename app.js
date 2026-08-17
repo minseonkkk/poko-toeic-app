@@ -483,7 +483,7 @@ class Component extends DCLogic {
     v.savedCount = savedIdx.length;
     v.wordCaption = S.wordFilter === 'saved'
       ? '내가 저장한 단어 ' + list.length + '개'
-      : 'poko 단어집 ' + S.W.length + '개 중 ' + list.length + '개 표시';
+      : 'sunny 단어집 ' + S.W.length + '개 중 ' + list.length + '개 표시';
     v.wordFilters = [['all', '전체'], ['saved', '내가 저장한 단어 ' + savedIdx.length]].map(([id, label]) => ({
       label, go: () => this.setState({ wordFilter: id }),
       bg: S.wordFilter === id ? '#5B4BF7' : '#fff',
@@ -648,7 +648,7 @@ function screenSplash() {
       <div style="animation:splashGrow 1.1s cubic-bezier(.34,1.56,.64,1) both, bob 2s ease-in-out 1.1s infinite">${poko('front', 156)}</div>
       <div style="display:flex;flex-direction:column;align-items:center;gap:6px;animation:splashFadeUp .6s ease .7s both">
         <div class="brand-logo" style="font-size:20px;color:#fff;opacity:.92">안녕하세요! 오늘도 반가워요</div>
-        <div class="brand-logo" style="font-size:38px;color:#fff">poko</div>
+        <div class="brand-logo" style="font-size:38px;color:#fff">sunny</div>
       </div>
     </div>`);
 }
@@ -663,12 +663,13 @@ function screenIntro(v) {
         <div style="display:flex;gap:6px">
           ${v.clipDots.map((d) => `<button data-act="${on(d.go)}" style="width:8px;height:8px;border-radius:50%;background:${d.bg};padding:0"></button>`).join('')}
         </div>
-        <div class="brand-logo" style="font-size:40px;color:#5B4BF7">poko</div>
+        <div class="brand-logo" style="font-size:40px;color:#5B4BF7">sunny</div>
         <div style="font-size:12.5px;font-weight:700;color:#A29CBE">${esc(v.clipLabel)}</div>
         <div style="font-size:16px;font-weight:600;color:#7A749A;text-align:center;line-height:1.6">시험에 가장 많이 나오는 순서대로,<br>TOEIC 단어와 문법을 게임처럼.</div>
       </div>
       <button class="btn-primary" data-act="${on(v.goAsk)}">시작하기</button>
       <button class="btn-secondary" data-act="${on(v.goLogin)}">이미 계정이 있어요</button>
+      <button data-act="${on(v.continueGuest)}" style="font-size:13px;font-weight:800;color:#A29CBE;padding-top:4px">로그인 없이 시작하기</button>
     </div>`);
 }
 
@@ -687,12 +688,6 @@ function screenAuthChoice(v) {
         <span style="font-size:23px;font-weight:800;letter-spacing:-.02em">${esc(v.authTitle)}</span>
         <span style="font-size:13px;font-weight:700;color:#7A749A;text-align:center;line-height:1.5">${esc(v.authHint)}</span>
       </div>
-      <button class="press" data-act="${on(v.continueGuest)}" style="width:100%;background:#5B4BF7;color:#fff;border-radius:16px;padding:16px;font-size:15.5px;font-weight:800;box-shadow:0 4px 0 #4436C9;margin-bottom:14px">로그인 없이 시작하기</button>
-      <div style="display:flex;align-items:center;gap:10px;padding-bottom:14px">
-        <span style="flex:1;height:2px;background:#F0EEF9"></span>
-        <span style="font-size:11.5px;font-weight:800;color:#C3BFD8">또는</span>
-        <span style="flex:1;height:2px;background:#F0EEF9"></span>
-      </div>
       <div style="display:flex;flex-direction:column;gap:8px">
         ${v.socials.map((s) => `
         <button class="press" data-act="${on(s.go)}" style="display:flex;align-items:center;justify-content:center;gap:10px;background:${s.bg};color:${s.fg};border:2px solid ${s.border};border-radius:16px;padding:14px;font-size:14.5px;font-weight:800;box-shadow:0 3px 0 ${s.shadow}">
@@ -700,7 +695,7 @@ function screenAuthChoice(v) {
         </button>`).join('')}
       </div>
       <div style="flex:1"></div>
-      <div style="font-size:11.5px;font-weight:700;color:#C3BFD8;text-align:center;line-height:1.5;padding-top:10px">계속하면 poko의 이용약관과 개인정보 처리방침에 동의하게 됩니다.</div>
+      <div style="font-size:11.5px;font-weight:700;color:#C3BFD8;text-align:center;line-height:1.5;padding-top:10px">계속하면 sunny의 이용약관과 개인정보 처리방침에 동의하게 됩니다.</div>
     </div>`);
 }
 
@@ -737,7 +732,7 @@ function screenAuthForm(v) {
         ${v.pwRules.map((c) => `<span style="display:flex;align-items:center;gap:8px;font-size:11.5px;font-weight:700;color:${c.color}"><span style="width:14px">${c.mark}</span><span>${esc(c.label)}</span></span>`).join('')}
       </div>` : ''}
       ${v.authError ? `<div style="background:#FFF0F1;color:#E23B4E;border-radius:12px;padding:11px 14px;margin-top:10px;font-size:12.5px;font-weight:700;line-height:1.5">${esc(v.authError)}</div>` : ''}
-      <div style="font-size:11px;font-weight:700;color:#A29CBE;line-height:1.5;padding:10px 2px 12px">계속하면 poko의 이용약관과 개인정보 처리방침에 동의하게 됩니다.</div>
+      <div style="font-size:11px;font-weight:700;color:#A29CBE;line-height:1.5;padding:10px 2px 12px">계속하면 sunny의 이용약관과 개인정보 처리방침에 동의하게 됩니다.</div>
       <button class="press" data-act="${on(v.submitAuth)}" style="width:100%;background:${v.authBg};color:${v.authFg};border-radius:16px;padding:16px;font-size:16px;font-weight:800;box-shadow:0 4px 0 ${v.authShadow}">${esc(v.authCta)}</button>
       ${v.hasSocialIcons ? `
       <div style="display:flex;align-items:center;gap:10px;padding:14px 0">
