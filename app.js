@@ -348,16 +348,14 @@ class Component extends DCLogic {
     v.isAuthChoice = S.view === 'auth' && S.authStep !== 'form';
     v.isAuthForm = S.view === 'auth' && S.authStep === 'form';
     v.isSignup = signup;
-    v.goLogin = () => this.setState({ view: 'auth', authMode: 'login', authStep: 'choice' });
-    v.goSignup = () => this.setState({ view: 'auth', authMode: 'signup', authStep: 'choice' });
-    v.toggleAuth = () => this.setState({ authMode: signup ? 'login' : 'signup', authStep: 'choice' });
+    v.goAuthChoice = () => this.setState({ view: 'auth', authStep: 'choice' });
+    v.goLoginForm = () => this.setState({ authMode: 'login', authStep: 'form' });
+    v.toggleAuth = () => this.setState({ authMode: signup ? 'login' : 'signup', authStep: 'form' });
     v.backToChoice = () => this.setState({ authStep: 'choice' });
     v.switchAsk = signup ? '이미 계정이 있나요?' : '계정이 없나요?';
     v.switchCta = signup ? '로그인' : '가입하기';
-    v.authTitle = signup ? '계정 만들기' : '다시 오셨네요';
-    v.authHint = signup
-      ? '저장한 단어와 학습 기록이 계정에 남아서, 언제 다시 들어와도 이어서 할 수 있어요.'
-      : '가입할 때 쓴 방법으로 로그인하면 저장한 단어장이 그대로 있어요.';
+    v.authTitle = '시작해볼까요?';
+    v.authHint = '로그인하면 저장한 단어와 학습 기록이 계정에 남아요. 비회원으로 먼저 둘러봐도 괜찮아요.';
     v.formTitle = signup ? '이메일로 가입하기' : '이메일로 로그인';
     v.formSub = signup ? '단어장과 학습 기록을 이 계정에 저장할게요.' : '가입할 때 쓴 이메일과 비밀번호를 입력해 주세요.';
     v.name = S.name; v.email = S.email; v.pw = S.pw;
@@ -671,33 +669,23 @@ function screenIntro(v) {
         <div style="font-size:16px;font-weight:600;color:#7A749A;text-align:center;line-height:1.6">시험에 가장 많이 나오는 순서대로,<br>TOEIC 단어와 문법을 게임처럼.</div>
       </div>
       <button class="btn-primary" data-act="${on(v.goAsk)}">시작하기</button>
-      <button class="btn-secondary" data-act="${on(v.goLogin)}">이미 계정이 있어요</button>
-      <button data-act="${on(v.continueGuest)}" style="font-size:13px;font-weight:800;color:#A29CBE;padding-top:4px">로그인 없이 시작하기</button>
-      <div style="font-size:11px;font-weight:700;color:#C3BFD8;text-align:center;padding-top:2px">이메일로 시작하면 기록이 계정에 저장돼요 · 로그인 없이 시작하면 기록이 저장되지 않아요</div>
     </div>`);
 }
 
 function screenAuthChoice(v) {
   return wrap(`
     <div style="position:absolute;inset:0;display:flex;flex-direction:column;padding:22px 22px 20px;background:#fff;overflow:auto">
-      <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding-bottom:6px">
+      <div style="padding-bottom:6px">
         <button data-act="${on(v.goIntro)}" style="font-size:24px;color:#C3BFD8;width:24px;text-align:left">‹</button>
-        <span style="display:flex;align-items:center;gap:6px;font-size:12.5px;font-weight:700;color:#7A749A">
-          <span>${esc(v.switchAsk)}</span>
-          <button data-act="${on(v.toggleAuth)}" style="font-size:12.5px;font-weight:800;color:#5B4BF7">${esc(v.switchCta)}</button>
-        </span>
       </div>
-      <div style="display:flex;flex-direction:column;align-items:center;gap:10px;padding:10px 0 18px">
+      <div style="display:flex;flex-direction:column;align-items:center;gap:10px;padding:10px 0 22px">
         ${poko('calm', 82)}
         <span style="font-size:23px;font-weight:800;letter-spacing:-.02em">${esc(v.authTitle)}</span>
         <span style="font-size:13px;font-weight:700;color:#7A749A;text-align:center;line-height:1.5">${esc(v.authHint)}</span>
       </div>
-      <div style="display:flex;flex-direction:column;gap:8px">
-        ${v.socials.map((s) => `
-        <button class="press" data-act="${on(s.go)}" style="display:flex;align-items:center;justify-content:center;gap:10px;background:${s.bg};color:${s.fg};border:2px solid ${s.border};border-radius:16px;padding:14px;font-size:14.5px;font-weight:800;box-shadow:0 3px 0 ${s.shadow}">
-          <span style="font-size:15px;width:18px;text-align:center">${s.icon}</span><span>${esc(s.label)}</span>
-        </button>`).join('')}
-      </div>
+      <button class="press" data-act="${on(v.goLoginForm)}" style="width:100%;background:#5B4BF7;color:#fff;border-radius:16px;padding:16px;font-size:15.5px;font-weight:800;box-shadow:0 4px 0 #4436C9;margin-bottom:8px">로그인하기</button>
+      <button class="press" data-act="${on(v.continueGuest)}" style="width:100%;background:#fff;color:#5B4BF7;border:2px solid #E5E2F0;border-radius:16px;padding:14px;font-size:14.5px;font-weight:800;box-shadow:0 3px 0 #E5E2F0">비회원으로 시작하기</button>
+      <div style="font-size:11px;font-weight:700;color:#C3BFD8;text-align:center;padding-top:10px">로그인하면 기록이 계정에 저장돼요 · 비회원으로 시작하면 기록이 저장되지 않아요</div>
       <div style="flex:1"></div>
       <div style="font-size:11.5px;font-weight:700;color:#C3BFD8;text-align:center;line-height:1.5;padding-top:10px">계속하면 sunny의 이용약관과 개인정보 처리방침에 동의하게 됩니다.</div>
     </div>`);
@@ -768,7 +756,7 @@ function screenAsk(v) {
         </button>`).join('')}
       </div>
       <div style="flex:1"></div>
-      <button class="press" data-act="${on(v.goSignup)}" style="width:100%;background:${v.nextBg};color:${v.nextFg};border-radius:16px;padding:16px;font-size:16px;font-weight:800;box-shadow:0 4px 0 ${v.nextShadow}">계속하기</button>
+      <button class="press" data-act="${on(v.goAuthChoice)}" style="width:100%;background:${v.nextBg};color:${v.nextFg};border-radius:16px;padding:16px;font-size:16px;font-weight:800;box-shadow:0 4px 0 ${v.nextShadow}">계속하기</button>
     </div>`);
 }
 
